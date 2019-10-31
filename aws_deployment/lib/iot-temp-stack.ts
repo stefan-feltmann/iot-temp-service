@@ -22,7 +22,10 @@ export class IoTTempStack extends cdk.Stack {
       engine: rds.DatabaseInstanceEngine.POSTGRES,
       instanceClass: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
       masterUsername: 'syscdk',
-      vpc
+      vpc,
+      deletionProtection: false,
+      deleteAutomatedBackups: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
   });
   }
 }
