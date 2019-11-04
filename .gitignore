@@ -11,3 +11,4 @@ cdk.out
 credentials.csv
 .env
 project_key
+arduino_code/config.h
