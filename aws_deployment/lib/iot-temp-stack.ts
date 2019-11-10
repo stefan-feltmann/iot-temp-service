@@ -16,18 +16,29 @@ export class IoTTempStack extends cdk.Stack {
       description: 'iot CDK Security Group'
     })
 
+    /*
+    TCP 1883 for unsecured MQQT broker communication via TCP
+    TCP 1884 for secured MQQT broker communication via TCP
+    TCP 3033 for unsecured communication via Websocket
+    TCP 8033 for secured communcation via Websocket
+    TCP 80 is needed for CertBot verfication process
+    */
+
+    iot_security_group.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(1883), 'TCP 1883 for unsecured MQQT broker communication via TCP');
+    iot_security_group.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(1884), 'TCP 1884 for secured MQQT broker communication via TCP');
+    iot_security_group.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(3033), 'TCP 3033 for unsecured communication via Websocket');
+    iot_security_group.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(8033), 'TCP 8033 for secured communcation via Websocket');
+    iot_security_group.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'TCP 80 is needed for CertBot verfication process');
     iot_security_group.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(22), 'SSH form anywhere');
 
-    const amznLinux = new ec2.AmazonLinuxImage({
-      generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX,
-      edition: ec2.AmazonLinuxEdition.STANDARD,
-      virtualization: ec2.AmazonLinuxVirt.HVM,
-      storage: ec2.AmazonLinuxStorage.GENERAL_PURPOSE,
+    const linux = new ec2.GenericLinuxImage({
+      'us-west-2': 'ami-06d51e91cea0dac8d',
     })
 
     const ec2Instance = new ec2.CfnInstance(this, "MQTT_Broker", {
-      imageId: amznLinux.getImage(this).imageId,
-      instanceType: "t2.micro",
+      imageId: linux.getImage(this).imageId,
+      keyName: 'temp-key',
+      instanceType: "t3.micro",
       monitoring: false,
       tags: [
         {"key": "Name", "value": "MQTT_Broker"}
@@ -60,6 +71,6 @@ export class IoTTempStack extends cdk.Stack {
       deletionProtection: false,
       deleteAutomatedBackups: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY
-    });
+    })
   }
 }
