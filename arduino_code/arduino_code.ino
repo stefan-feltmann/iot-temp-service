@@ -1,18 +1,39 @@
-/*
- *  Simple HTTP get webclient test
- */
-
 #include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 
 
 #include "config.h"
+#define aref_voltage 3.3  
+//#include "DHT.h"
+
+//#define DHTPIN 14
+//#define DHTTYPE DHT11
+
+const int sensorPin = A0;
 
 const char* ssid     = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 
 const char* host = IOT_HOST;
 
+const char* iotClientId = IOT_CLIENT_ID;
+const char* iotClientUser = IOT_CLIENT_USER;
+const char* iotClientPassword = IOT_CLIENT_PASSWORD;
+
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  // handle message arrived
+}
+
+
+WiFiClient wifiClient;
+
+//DHT dht(DHTPIN, DHTTYPE);
+
+PubSubClient client(host, 1883, callback, wifiClient);
+
 void setup() {
+//  analogReference(EXTERNAL);
   Serial.begin(115200);
   delay(100);
 
@@ -34,42 +55,52 @@ void setup() {
   Serial.println("WiFi connected");  
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+
+  if (client.connect(iotClientId, iotClientUser, iotClientPassword)) {
+//    client.publish("outTopic","hello world");
+    client.subscribe("inTopic");
+  }
+//  dht.begin();  
 }
 
-int value = 0;
+float getTemp() {
+  //getting the voltage reading from the temperature sensor
+  int reading = analogRead(sensorPin);
+  Serial.print(reading); Serial.println(" reading");  
+ 
+  // converting that reading to voltage, for 3.3v arduino use 3.3
+  float voltage = reading * aref_voltage;
+  voltage /= 1024.0;
+
+  // I'm not 100% sure why this is needed.
+  voltage = voltage / 3.44;
+ 
+  // print out the voltage
+  Serial.print(voltage); Serial.println(" volts");
+ 
+  // now print out the temperature
+  float temperatureC = (voltage - 0.5) * 100 ;  //converting from 10 mv per degree wit 500 mV offset
+                                               //to degrees ((voltage - 500mV) times 100)
+  Serial.print(temperatureC); Serial.println(" degrees C");
+
+  // now convert to Fahrenheit
+  float temperatureF = (temperatureC * 9.0 / 5.0) + 32.0;
+  Serial.print(temperatureF); Serial.println(" degrees F");
+
+  return temperatureC;
+}
 
 void loop() {
+  updateMqtt();
+  client.loop();
   delay(5000);
-  ++value;
+}
 
-  Serial.print("connecting to ");
-  Serial.println(host);
+void updateMqtt() {
+  unsigned long time = millis();
   
-  // Use WiFiClient class to create TCP connections
-  WiFiClient client;
-  const int httpPort = 80;
-  if (!client.connect(host, httpPort)) {
-    Serial.println("connection failed");
-    return;
-  }
-  
-  // We now create a URI for the request
-  String url = "/testwifi/index.html";
-  Serial.print("Requesting URL: ");
-  Serial.println(url);
-  
-  // This will send the request to the server
-  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-               "Host: " + host + "\r\n" + 
-               "Connection: close\r\n\r\n");
-  delay(500);
-  
-  // Read all the lines of the reply from server and print them to Serial
-  while(client.available()){
-    String line = client.readStringUntil('\r');
-    Serial.print(line);
-  }
-  
-  Serial.println();
-  Serial.println("closing connection");
+  String thisString = String(getTemp());
+  char copy[thisString.length()];
+  thisString.toCharArray(copy, thisString.length());
+  client.publish("outTopic", copy);
 }
