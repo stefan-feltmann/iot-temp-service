@@ -1,6 +1,9 @@
 import cdk = require('@aws-cdk/core');
 import ec2 = require('@aws-cdk/aws-ec2');
 import rds = require('@aws-cdk/aws-rds');
+import route53 = require('@aws-cdk/aws-route53')
+import route53Targets = require('@aws-cdk/aws-route53-targets')
+import certmgr = require('@aws-cdk/aws-certificatemanager')
 
 export class IoTTempStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -71,6 +74,22 @@ export class IoTTempStack extends cdk.Stack {
       deletionProtection: false,
       deleteAutomatedBackups: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY
+    })
+
+
+    const rootDomainName: string = process.env.ROOT_DOMAIN as string
+    const zone = route53.HostedZone.fromLookup(this, 'IoT-Zone', { domainName: rootDomainName })
+    const apiSubDomainName = `iot-temp.${rootDomainName}`
+
+    const cert = new certmgr.DnsValidatedCertificate(this, `${apiSubDomainName}-cert`, {
+      domainName: apiSubDomainName,
+      hostedZone: zone,
+    })
+
+    new route53.ARecord(this, `${apiSubDomainName}-CustomDomainAliasRecord`, {
+      recordName: apiSubDomainName,
+      zone: zone,
+      target: route53.AddressRecordTarget.fromIpAddresses(ec2Instance.attrPublicIp),
     })
   }
 }
