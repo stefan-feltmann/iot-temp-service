@@ -4,6 +4,7 @@ import rds = require('@aws-cdk/aws-rds');
 import route53 = require('@aws-cdk/aws-route53')
 import route53Targets = require('@aws-cdk/aws-route53-targets')
 import certmgr = require('@aws-cdk/aws-certificatemanager')
+import secretsmanager = require('@aws-cdk/aws-secretsmanager');
 
 export class IoTTempStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -64,12 +65,19 @@ export class IoTTempStack extends cdk.Stack {
 
     iot_db_security_group.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(5432), 'Postgres form anywhere');
 
+    
+    const dbPassword: string = process.env.DB_PASSWORD as string
+
     const instance = new  rds.DatabaseInstance(this, 'Temperature_Postgres', {
       engine: rds.DatabaseInstanceEngine.POSTGRES,
       instanceClass: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
       masterUsername: 'syscdk',
+      masterUserPassword: new cdk.SecretValue(dbPassword),
       databaseName: 'Temperature_Postgres',
       securityGroups: [iot_db_security_group],
+      vpcPlacement: {
+        subnetType: ec2.SubnetType.PUBLIC
+      },
       vpc,
       deletionProtection: false,
       deleteAutomatedBackups: true,
@@ -79,17 +87,26 @@ export class IoTTempStack extends cdk.Stack {
 
     const rootDomainName: string = process.env.ROOT_DOMAIN as string
     const zone = route53.HostedZone.fromLookup(this, 'IoT-Zone', { domainName: rootDomainName })
-    const apiSubDomainName = `iot-temp.${rootDomainName}`
+    const mqttSubDomainName = `iot-temp.${rootDomainName}`
+    const dbSubDomainName = `iot-db.${rootDomainName}`
 
-    const cert = new certmgr.DnsValidatedCertificate(this, `${apiSubDomainName}-cert`, {
-      domainName: apiSubDomainName,
+    const cert = new certmgr.DnsValidatedCertificate(this, `${mqttSubDomainName}-cert`, {
+      domainName: mqttSubDomainName,
       hostedZone: zone,
     })
 
-    new route53.ARecord(this, `${apiSubDomainName}-CustomDomainAliasRecord`, {
-      recordName: apiSubDomainName,
+    new route53.ARecord(this, `${mqttSubDomainName}-MqttCustomDomainAliasRecord`, {
+      recordName: mqttSubDomainName,
       zone: zone,
       target: route53.AddressRecordTarget.fromIpAddresses(ec2Instance.attrPublicIp),
+    })
+
+    const dbEndpoint = instance.dbInstanceEndpointAddress
+
+    new route53.CnameRecord(this, `${mqttSubDomainName}-DbCustomDomainAliasRecord`, {
+      recordName: dbSubDomainName,
+      zone: zone,
+      domainName: dbEndpoint,
     })
   }
 }
