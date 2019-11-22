@@ -1,0 +1,13 @@
+{
+  "name": "node_mosquitto",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "knex": "0.20.2",
+    "pg": "7.14.0"
+  }
+}
