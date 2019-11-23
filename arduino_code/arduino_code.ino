@@ -72,8 +72,10 @@ float getTemp() {
   float voltage = reading * aref_voltage;
   voltage /= 1024.0;
 
+  Serial.print(voltage); Serial.println(" unmodified volts");
+
   // I'm not 100% sure why this is needed.
-  voltage = voltage / 3.44;
+  voltage = voltage / 3.438438438;
  
   // print out the voltage
   Serial.print(voltage); Serial.println(" volts");

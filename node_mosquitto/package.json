@@ -4,10 +4,23 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "npm install && npm run build && node index.js"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0.18",
+    "jest": "^24.9.0",
+    "ts-jest": "^24.0.2",
+    "ts-node": "^8.1.0",
+    "typescript": "~3.6.2"
   },
   "dependencies": {
+    "@types/node": "12.12.12",
     "knex": "0.20.2",
-    "pg": "7.14.0"
+    "mqtt": "3.0.0",
+    "dotenv": "8.2.0",
+    "source-map-support": "^0.5.9"
   }
 }

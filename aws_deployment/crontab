@@ -1,0 +1,1 @@
+@reboot cd node_mosquitto/ && npm start > /tmp/output.log
