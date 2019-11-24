@@ -28,6 +28,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 WiFiClient wifiClient;
 
+String macAddress;
+
 //DHT dht(DHTPIN, DHTTYPE);
 
 PubSubClient client(host, 1883, callback, wifiClient);
@@ -51,10 +53,14 @@ void setup() {
     Serial.print(".");
   }
 
+  macAddress = WiFi.macAddress();
+
   Serial.println("");
   Serial.println("WiFi connected");  
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  Serial.println("MAC Address: ");
+  Serial.println(macAddress);
 
   if (client.connect(iotClientId, iotClientUser, iotClientPassword)) {
 //    client.publish("outTopic","hello world");
@@ -101,8 +107,16 @@ void loop() {
 void updateMqtt() {
   unsigned long time = millis();
   
-  String thisString = String(getTemp());
-  char copy[thisString.length()];
-  thisString.toCharArray(copy, thisString.length());
-  client.publish("outTopic", copy);
+  String tempString = String(getTemp());
+  char tempChar[tempString.length()];
+  tempString.toCharArray(tempChar, tempString.length()+1);
+  
+  String channel = "outTopic/"+macAddress;
+  char channelChar[channel.length()];
+  channel.toCharArray(channelChar, channel.length()+1);
+
+  Serial.println(channelChar);
+  Serial.println(tempChar);
+  
+  client.publish(channelChar, tempChar);
 }

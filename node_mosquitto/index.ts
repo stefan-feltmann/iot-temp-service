@@ -7,7 +7,7 @@ const mqttSubDomainName = `mqtt://iot-temp.${rootDomainName}`
 const username: string = process.env.MQTT_USERNAME as string
 const password: string = process.env.MQTT_PASSWORD as string
 
-const channel: string = 'outTopic'
+const channel: string = 'outTopic/#'
 
 console.log(username)
 console.log(password)
@@ -23,16 +23,20 @@ client.on('connect', function () {
     // if (!err) {
     //   client.publish(channel, 'Hello mqtt')
     // }
+    if (err) {
+      console.error(err)
+    }
   })
 })
 
 client.on('error', function (error) {
-  // console.error(error)
+  console.error(error)
 })
  
 client.on('message', function (topic, message) {
   // message is Buffer
-  console.log(message.toString())
+  console.log(`message: ${message.toString()}`)
+  console.log(`topic: ${topic.toString()}`)
   // client.end()
 })
 
