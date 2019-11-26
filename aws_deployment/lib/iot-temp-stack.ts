@@ -1,6 +1,9 @@
 import cdk = require('@aws-cdk/core');
 import ec2 = require('@aws-cdk/aws-ec2');
 import rds = require('@aws-cdk/aws-rds');
+import sns = require('@aws-cdk/aws-sns');
+import snsSubs = require('@aws-cdk/aws-sns-subscriptions')
+import lambda = require('@aws-cdk/aws-lambda');
 import route53 = require('@aws-cdk/aws-route53')
 import route53Targets = require('@aws-cdk/aws-route53-targets')
 import certmgr = require('@aws-cdk/aws-certificatemanager')
@@ -19,6 +22,8 @@ export class IoTTempStack extends cdk.Stack {
       allowAllOutbound: true,
       description: 'iot CDK Security Group'
     })
+
+
 
     /*
     TCP 1883 for unsecured MQQT broker communication via TCP
@@ -67,11 +72,12 @@ export class IoTTempStack extends cdk.Stack {
 
     
     const dbPassword: string = process.env.DB_PASSWORD as string
+    const dbUser: string = process.env.DB_USER as string
 
     const instance = new  rds.DatabaseInstance(this, 'Temperature_Postgres', {
       engine: rds.DatabaseInstanceEngine.POSTGRES,
       instanceClass: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
-      masterUsername: 'syscdk',
+      masterUsername: dbUser,
       masterUserPassword: new cdk.SecretValue(dbPassword),
       databaseName: 'Temperature_Postgres',
       securityGroups: [iot_db_security_group],
@@ -90,10 +96,10 @@ export class IoTTempStack extends cdk.Stack {
     const mqttSubDomainName = `iot-temp.${rootDomainName}`
     const dbSubDomainName = `iot-db.${rootDomainName}`
 
-    const cert = new certmgr.DnsValidatedCertificate(this, `${mqttSubDomainName}-cert`, {
-      domainName: mqttSubDomainName,
-      hostedZone: zone,
-    })
+    // const cert = new certmgr.DnsValidatedCertificate(this, `${mqttSubDomainName}-cert`, {
+    //   domainName: mqttSubDomainName,
+    //   hostedZone: zone,
+    // })
 
     new route53.ARecord(this, `${mqttSubDomainName}-MqttCustomDomainAliasRecord`, {
       recordName: mqttSubDomainName,
@@ -108,5 +114,25 @@ export class IoTTempStack extends cdk.Stack {
       zone: zone,
       domainName: dbEndpoint,
     })
+
+    const tempToPostGresTopic = new sns.Topic(this, 'tempToPostGresTopic', {
+      topicName: 'tempToPostGresTopic'
+    })
+
+    const tempToPostGresLambda = new lambda.Function(this, 'tempToPostGresLambda', {
+      description: 'Push Temp data to PostGres',
+      runtime: lambda.Runtime.NODEJS_10_X,
+      code: lambda.Code.asset('handlers/tempToPostGres'),
+      handler: 'index.handler',
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 128,
+      environment: {
+        dbUser: dbUser,
+        dbPassword: dbPassword,
+        host: dbSubDomainName
+      }
+    })
+
+    tempToPostGresTopic.addSubscription(new snsSubs.LambdaSubscription(tempToPostGresLambda))
   }
 }

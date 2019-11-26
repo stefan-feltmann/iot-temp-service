@@ -1,1 +1,2 @@
-@reboot cd node_mosquitto/ && npm start > /tmp/output.log
+@reboot sudo systemctl start mosquitto && mosquitto -v > /tmp/mqtt_output.log
+@reboot cd node_mosquitto/ && npm start > /tmp/node_mosquitto_output.log
