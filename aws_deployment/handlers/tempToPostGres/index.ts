@@ -62,7 +62,7 @@ export const handler = async function(event: any, context: Context) {
 
   console.log(process.env.test)
 
-  await knex('device').insert({name: macAddress, mac_address: macAddress, created_at: knex.fn.now(), updated_at: knex.fn.now()})
+  // await knex('device').insert({name: macAddress, mac_address: macAddress, created_at: knex.fn.now(), updated_at: knex.fn.now()})
 
   await knex('temperature').insert({temperature: temp, deviceId: macAddress, created_at: knex.fn.now(), updated_at: knex.fn.now()})
 

@@ -23,12 +23,21 @@ const char* iotClientPassword = IOT_CLIENT_PASSWORD;
 
 void callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
+   // Print the message
+  Serial.print("Message: ");
+  for(int i = 0; i < length; i ++)
+  {
+    Serial.print(char(payload[i]));
+  }
+ 
+  // Print a newline
+  Serial.println("");
 }
 
 
 WiFiClient wifiClient;
 
-String macAddress;
+String deviceName;
 
 //DHT dht(DHTPIN, DHTTYPE);
 
@@ -53,14 +62,15 @@ void setup() {
     Serial.print(".");
   }
 
-  macAddress = WiFi.macAddress();
+//  deviceName = WiFi.macAddress();
+  deviceName = "deviceName";
 
   Serial.println("");
   Serial.println("WiFi connected");  
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-  Serial.println("MAC Address: ");
-  Serial.println(macAddress);
+//  Serial.println("MAC Address: ");
+//  Serial.println(macAddress);
 
   if (client.connect(iotClientId, iotClientUser, iotClientPassword)) {
 //    client.publish("outTopic","hello world");
@@ -111,7 +121,7 @@ void updateMqtt() {
   char tempChar[tempString.length()];
   tempString.toCharArray(tempChar, tempString.length()+1);
   
-  String channel = "outTopic/"+macAddress;
+  String channel = "outTopic/"+deviceName;
   char channelChar[channel.length()];
   channel.toCharArray(channelChar, channel.length()+1);
 

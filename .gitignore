@@ -13,3 +13,6 @@ credentials.csv
 project_key
 arduino_code/config.h
 aws_deployment/cdk.context.json
+
+#VS Code
+.vscode/
