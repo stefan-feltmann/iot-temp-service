@@ -8,6 +8,9 @@ import route53 = require('@aws-cdk/aws-route53')
 import route53Targets = require('@aws-cdk/aws-route53-targets')
 import certmgr = require('@aws-cdk/aws-certificatemanager')
 import secretsmanager = require('@aws-cdk/aws-secretsmanager');
+import { UserPool, SignInType } from '@aws-cdk/aws-cognito';
+import { GraphQLApi, FieldLogLevel, UserPoolDefaultAction, MappingTemplate } from '@aws-cdk/aws-appsync';
+import { Table, BillingMode, AttributeType} from '@aws-cdk/aws-dynamodb';
 
 export class IoTTempStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -134,5 +137,85 @@ export class IoTTempStack extends cdk.Stack {
     })
 
     tempToPostGresTopic.addSubscription(new snsSubs.LambdaSubscription(tempToPostGresLambda))
+
+    
+
+    const userPool = new UserPool(this, 'TemperatureUserPool', {
+      signInType: SignInType.USERNAME,
+    })
+
+    const tempTableDefinition = `type Temperature {
+      id: ID!
+      temperature: Float!
+      deviceId: String!
+      timestamp: Int!
+  }
+  
+  input SaveTemperatureInput {
+      temperature: Float!
+      deviceId: String!
+      timestamp: Int!
+  }
+  
+  type Query {
+      getTemperatures: [Temperature]
+      getTemperature(id: String): Temperature
+  }
+  
+  type Mutation {
+      addTemperature(temperature: SaveTemperatureInput!): Temperature
+      saveTemperature(id: String!, temperature: SaveTemperatureInput!): Temperature
+      removeTemperature(id: String!): Temperature
+  }`
+
+    const api = new GraphQLApi(this, 'Api', {
+      name: `TemperatureApi`,
+      logConfig: {
+        fieldLogLevel: FieldLogLevel.ALL,
+      },
+      userPoolConfig: {
+        userPool,
+        defaultAction: UserPoolDefaultAction.ALLOW,
+      },
+      schemaDefinition: tempTableDefinition
+    });
+    const temperatureTable = new Table(this, 'TemperatureTable', {
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: 'id',
+        type: AttributeType.STRING,
+      },
+    });
+    const temperatureDS = api.addDynamoDbDataSource('Temperature', 'The temperature data source', temperatureTable);
+    temperatureDS.createResolver({
+      typeName: 'Query',
+      fieldName: 'getTemperatures',
+      requestMappingTemplate: MappingTemplate.dynamoDbScanTable(),
+      responseMappingTemplate: MappingTemplate.dynamoDbResultList(),
+    })
+    temperatureDS.createResolver({
+      typeName: 'Query',
+      fieldName: 'getTemperature',
+      requestMappingTemplate: MappingTemplate.dynamoDbGetItem('id', 'id'),
+      responseMappingTemplate: MappingTemplate.dynamoDbResultItem(),
+    });
+    temperatureDS.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'addTemperature',
+      requestMappingTemplate: MappingTemplate.dynamoDbPutItem('id', 'temperature'),
+      responseMappingTemplate: MappingTemplate.dynamoDbResultItem(),
+    });
+    temperatureDS.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'saveTemperature',
+      requestMappingTemplate: MappingTemplate.dynamoDbPutItem('id', 'temperature', 'id'),
+      responseMappingTemplate: MappingTemplate.dynamoDbResultItem(),
+    });
+    temperatureDS.createResolver({
+      typeName: 'Mutation',
+      fieldName: 'removeTemperature',
+      requestMappingTemplate: MappingTemplate.dynamoDbDeleteItem('id', 'id'),
+      responseMappingTemplate: MappingTemplate.dynamoDbResultItem(),
+    });
   }
 }
