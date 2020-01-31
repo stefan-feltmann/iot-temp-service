@@ -8,8 +8,8 @@ import route53 = require('@aws-cdk/aws-route53')
 import route53Targets = require('@aws-cdk/aws-route53-targets')
 import certmgr = require('@aws-cdk/aws-certificatemanager')
 import secretsmanager = require('@aws-cdk/aws-secretsmanager');
-import { UserPool, SignInType } from '@aws-cdk/aws-cognito';
-import { GraphQLApi, FieldLogLevel, UserPoolDefaultAction, MappingTemplate } from '@aws-cdk/aws-appsync';
+import { UserPool, SignInType, CfnUserPoolUser } from '@aws-cdk/aws-cognito';
+import { GraphQLApi, FieldLogLevel, UserPoolDefaultAction, MappingTemplate, CfnApiKey } from '@aws-cdk/aws-appsync';
 import { Table, BillingMode, AttributeType} from '@aws-cdk/aws-dynamodb';
 
 export class IoTTempStack extends cdk.Stack {
@@ -144,6 +144,11 @@ export class IoTTempStack extends cdk.Stack {
       signInType: SignInType.USERNAME,
     })
 
+    new CfnUserPoolUser(this, 'TemperatureUserPoolUser', {
+      userPoolId: userPool.userPoolId,
+      username: "TemperatureUser"
+    })
+
     const tempTableDefinition = `type Temperature {
       id: ID!
       temperature: Float!
@@ -168,14 +173,11 @@ export class IoTTempStack extends cdk.Stack {
       removeTemperature(id: String!): Temperature
   }`
 
-    const api = new GraphQLApi(this, 'Api', {
+    //amplify add codegen --apiId n3x3an4ae5hlvaw46wlurwshpy
+    const TemperatureGraphQLapi = new GraphQLApi(this, 'Api', {
       name: `TemperatureApi`,
       logConfig: {
         fieldLogLevel: FieldLogLevel.ALL,
-      },
-      userPoolConfig: {
-        userPool,
-        defaultAction: UserPoolDefaultAction.ALLOW,
       },
       schemaDefinition: tempTableDefinition
     });
@@ -186,7 +188,23 @@ export class IoTTempStack extends cdk.Stack {
         type: AttributeType.STRING,
       },
     });
-    const temperatureDS = api.addDynamoDbDataSource('Temperature', 'The temperature data source', temperatureTable);
+
+    TemperatureGraphQLapi.apiId
+
+    let date = new Date(Date.now())
+    date.setMonth(date.getMonth()+11)
+
+    let dateFormatted = Date.parse(date.toString()) / 1000
+
+    // da2-ndoui5kgevce5dcvk5e5mwoxfa
+
+    new CfnApiKey(this, 'TemperatureApiKey', {
+      apiId: TemperatureGraphQLapi.apiId,
+      description: "Auto Gen Key",
+      expires: dateFormatted
+    })
+    
+    const temperatureDS = TemperatureGraphQLapi.addDynamoDbDataSource('Temperature', 'The temperature data source', temperatureTable);
     temperatureDS.createResolver({
       typeName: 'Query',
       fieldName: 'getTemperatures',

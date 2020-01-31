@@ -20,10 +20,13 @@ const char* iotClientId = IOT_CLIENT_ID;
 const char* iotClientUser = IOT_CLIENT_USER;
 const char* iotClientPassword = IOT_CLIENT_PASSWORD;
 
+boolean needName = true;
 
 void callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
    // Print the message
+  Serial.println(topic);
+
   Serial.print("Message: ");
   for(int i = 0; i < length; i ++)
   {
@@ -32,6 +35,8 @@ void callback(char* topic, byte* payload, unsigned int length) {
  
   // Print a newline
   Serial.println("");
+
+  needName = false;
 }
 
 
@@ -62,8 +67,17 @@ void setup() {
     Serial.print(".");
   }
 
-//  deviceName = WiFi.macAddress();
-  deviceName = "deviceName";
+  deviceName = WiFi.macAddress();
+//  deviceName = "deviceName";
+  String deviceNameString = String(deviceName);
+  char deviceNameChar[deviceNameString.length()];
+  deviceNameString.toCharArray(deviceNameChar, deviceNameString.length()+1);
+
+  String channelName = "register";
+//  String channelName = "outTopic/register";
+  String channelNameString = String(channelName);
+  char channelNameChar[channelNameString.length()];
+  channelNameString.toCharArray(channelNameChar, channelNameString.length()+1);
 
   Serial.println("");
   Serial.println("WiFi connected");  
@@ -72,11 +86,33 @@ void setup() {
 //  Serial.println("MAC Address: ");
 //  Serial.println(macAddress);
 
-  if (client.connect(iotClientId, iotClientUser, iotClientPassword)) {
-//    client.publish("outTopic","hello world");
-    client.subscribe("inTopic");
+//  client.setCallback(callback);
+
+  while (!client.connect(iotClientId, iotClientUser, iotClientPassword)) {
+      Serial.println("");
+      Serial.println("CONNECTING");  
+      Serial.println("");
   }
-//  dht.begin();  
+
+//  if (client.connect(iotClientId, iotClientUser, iotClientPassword)) {
+  
+  boolean subbed = client.subscribe("deviceName/#");
+  if(subbed) {
+    Serial.println("Subbed");
+  } else {
+    Serial.println("Not Subbed");
+  }
+    client.publish(channelNameChar,deviceNameChar);
+//  }
+//  dht.begin();
+
+  while (needName) {
+      client.loop();
+      Serial.println("");
+      Serial.println("WAITING FOR NAME");  
+      Serial.println("");
+      delay(5000);
+  }
 }
 
 float getTemp() {

@@ -16,6 +16,9 @@ ssh-keyscan -H $IOT_DOMAIN >> ~/.ssh/known_hosts
 rsync -P -v -e "ssh -i ../project_key/temp-key" ../mosquitto_install/install.sh ubuntu@$IOT_DOMAIN:~/
 rsync -P -v -e "ssh -i ../project_key/temp-key" crontab ubuntu@$IOT_DOMAIN:~/
 rsync -P -v -e "ssh -i ../project_key/temp-key" --exclude 'node_modules' -r ../node_mosquitto/ ubuntu@$IOT_DOMAIN:~/node_mosquitto/
+ssh -i ../project_key/temp-key ubuntu@$IOT_DOMAIN "curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -"
+ssh -i ../project_key/temp-key ubuntu@$IOT_DOMAIN "sudo apt-get update"
+ssh -i ../project_key/temp-key ubuntu@$IOT_DOMAIN "sudo apt-get install -y nodejs"
 ssh -i ../project_key/temp-key ubuntu@$IOT_DOMAIN "cd node_mosquitto && npm install"
 ssh -i ../project_key/temp-key ubuntu@$IOT_DOMAIN "crontab -u ubuntu ~/crontab"
 ssh -i ../project_key/temp-key ubuntu@$IOT_DOMAIN "bash install.sh"
