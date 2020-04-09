@@ -196,8 +196,6 @@ export class IoTTempStack extends cdk.Stack {
 
     let dateFormatted = Date.parse(date.toString()) / 1000
 
-    // da2-ndoui5kgevce5dcvk5e5mwoxfa
-
     new CfnApiKey(this, 'TemperatureApiKey', {
       apiId: TemperatureGraphQLapi.apiId,
       description: "Auto Gen Key",

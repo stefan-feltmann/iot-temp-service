@@ -10,8 +10,9 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
+    "install_handlers": "cd handlers/tempToPostGres && npm install",
     "server_config": "bash server_config.sh",
-    "update": "npm run build && cdk deploy --require-approval=never",
+    "update": "npm run buildComplete && cdk deploy --require-approval=never",
     "deploy": "npm run update && npm run server_config",
     "destroy": "cdk destroy"
   },
